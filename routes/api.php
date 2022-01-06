@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\EmailVerificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,9 +28,12 @@ Route::group(['middleware' => ['auth:api']], function() {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/articles', [ArticleController::class, 'store']);
     Route::put('/articles/{id}', [ArticleController::class, 'update']);
-   
+    // Route::post('/email/verification-notification', [EmailVerificationController::class, 'sendVerificationEmail']);
+    // Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])->name('verification.verify');
+
 });
 
+//Protect (atuhentication and role admin)
 Route::group(['middleware' => ['auth:api', 'role']], function() {
     Route::delete('/articles/{id}', [ArticleController::class, 'destroy']);
     Route::get('/user', [UserController::class, 'index']);
@@ -41,3 +46,19 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::get('/articles/search/{title}', [ArticleController::class, 'search']);
 Route::get('/articles/{id}', [ArticleController::class, 'show']);
 Route::get('/articles', [ArticleController::class, 'index']);
+
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+
+    return redirect('/home');
+})->middleware(['auth:api'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+
+    return back()->with('message', 'Verification link sent!');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');

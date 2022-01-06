@@ -9,6 +9,8 @@ use stdClass;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class AuthController extends Controller
 {
@@ -97,7 +99,7 @@ class AuthController extends Controller
         $token = $user->createToken('myapptoken')->accessToken;
 
         $res = new stdClass();
-        $res->message = 'Register Success';
+        $res->message = 'Register Success, Please Check Your Email for ';
         $res->data = $user;
         $res->token = $token;
 
@@ -224,6 +226,23 @@ class AuthController extends Controller
         
         return [
             'message' => 'Logged Out'
+        ];
+    }
+
+    public function verify(EmailVerificationRequest $request)
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return [
+                'message' => 'Email already verified'
+            ];
+        }
+
+        if ($request->user()->markEmailAsVerified()) {
+            event(new Verified($request->user()));
+        }
+
+        return [
+            'message'=>'Email has been verified'
         ];
     }
 
